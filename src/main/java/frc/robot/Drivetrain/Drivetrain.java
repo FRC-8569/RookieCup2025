@@ -1,0 +1,214 @@
+package frc.robot.Drivetrain;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.function.Supplier;
+
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.config.RobotConfig;
+import com.pathplanner.lib.controllers.PPLTVController;
+import com.revrobotics.RelativeEncoder;
+import com.revrobotics.sim.SparkMaxSim;
+import com.revrobotics.sim.SparkRelativeEncoderSim;
+import com.revrobotics.spark.SparkClosedLoopController;
+import com.revrobotics.spark.SparkMax;
+import com.revrobotics.spark.SparkBase.ControlType;
+import com.revrobotics.spark.SparkBase.PersistMode;
+import com.revrobotics.spark.SparkBase.ResetMode;
+import com.revrobotics.spark.SparkLowLevel.MotorType;
+import com.revrobotics.spark.config.SparkMaxConfig;
+import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
+import com.studica.frc.AHRS;
+import com.studica.frc.AHRS.NavXComType;
+
+import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.estimator.DifferentialDrivePoseEstimator;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.kinematics.DifferentialDriveWheelPositions;
+import edu.wpi.first.math.kinematics.DifferentialDriveWheelSpeeds;
+import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.PowerDistribution;
+import edu.wpi.first.wpilibj.RobotBase;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import edu.wpi.first.wpilibj.PowerDistribution.ModuleType;
+import edu.wpi.first.wpilibj.simulation.DifferentialDrivetrainSim;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.Vision.Vision;
+
+public class Drivetrain extends SubsystemBase{
+    public SparkMax LeftMotor, LeftBackMotor, RightMotor, RightBackMotor;
+    public RelativeEncoder LeftEncoder, RightEncoder;
+    public SparkClosedLoopController LeftPID, RightPID;
+    public AHRS gyro;
+    public DifferentialDrivePoseEstimator PoseEstimator;
+    public PowerDistribution pdh;
+
+    public SparkMaxSim LeftSim, RightSim;
+    public SparkRelativeEncoderSim LeftEncoderSim, RightEncoderSim;
+    public DifferentialDrivetrainSim SystemSim;
+
+    private SparkMaxConfig LeftConfig, LeftBackConfig, RightConfig, RightBackConfig;
+
+    public String NowDoing = "null";
+
+    private static Drivetrain system;
+    public Vision vision;
+
+    private Drivetrain(){
+        LeftMotor = new SparkMax(Constants.LeftIDs[0], MotorType.kBrushless);
+        LeftBackMotor = new SparkMax(Constants.LeftIDs[1], MotorType.kBrushless);
+        RightMotor = new SparkMax(Constants.RightIDs[0], MotorType.kBrushless);
+        RightBackMotor = new SparkMax(Constants.RightIDs[1], MotorType.kBrushless);
+
+        LeftEncoder = LeftMotor.getEncoder();
+        RightEncoder = RightMotor.getEncoder();
+        LeftPID = LeftMotor.getClosedLoopController();
+        RightPID = RightMotor.getClosedLoopController();
+        gyro = new AHRS(NavXComType.kMXP_SPI);
+        PoseEstimator = new DifferentialDrivePoseEstimator(Constants.kinematics, gyro.getRotation2d(), getPosition().leftMeters, getPosition().rightMeters, Constants.InitialPose);
+        pdh = new PowerDistribution(Constants.PDHCANID, ModuleType.kRev);
+        pdh.setSwitchableChannel(true);
+        SmartDashboard.putData(pdh);
+        
+        NowDoing = "null";
+
+        LeftConfig = new SparkMaxConfig();
+        RightConfig = new SparkMaxConfig();
+        LeftBackConfig = new SparkMaxConfig();
+        RightBackConfig = new SparkMaxConfig();
+
+        LeftConfig
+            .idleMode(IdleMode.kBrake)
+            .inverted(false)
+            .voltageCompensation(12)
+            .smartCurrentLimit(44);
+        LeftConfig.encoder
+            .positionConversionFactor(Constants.PositionConvertionFactor)
+            .velocityConversionFactor(Constants.VelocityConvertionFactor);
+        LeftConfig.closedLoop.apply(Constants.LeftPID);
+        LeftBackConfig.follow(LeftMotor);
+
+        RightConfig
+            .idleMode(IdleMode.kBrake)
+            .inverted(true)
+            .voltageCompensation(12)
+            .smartCurrentLimit(44);
+        RightConfig.encoder
+            .positionConversionFactor(Constants.PositionConvertionFactor)
+            .velocityConversionFactor(Constants.VelocityConvertionFactor);
+        RightConfig.closedLoop.apply(Constants.RightPID);
+        RightBackConfig.follow(RightMotor);
+
+        LeftMotor.configure(LeftConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+        RightMotor.configure(RightConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+        LeftBackMotor.configure(RightBackConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+        RightBackMotor.configure(RightBackConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+    
+        AutoInit();
+        vision = Vision.getInstance();
+        if(RobotBase.isSimulation()) simInit();
+    }
+
+    public void drive(double LeftSpeed, double RightSpeed){
+        if(RobotBase.isReal()){
+            LeftPID.setReference(LeftSpeed, ControlType.kVelocity);
+            RightPID.setReference(RightSpeed, ControlType.kVelocity);
+        }else{
+            LeftSim.setAppliedOutput(LeftSpeed/(5676*Constants.VelocityConvertionFactor));
+            RightSim.setAppliedOutput(RightSpeed/(5676*Constants.VelocityConvertionFactor));
+        }
+    }
+
+    public Command drive(Supplier<Double> Throttle,Supplier<Double>  Rotataion){
+        return run(() -> drive((Throttle.get()+Rotataion.get())*(5676*Constants.VelocityConvertionFactor), (Throttle.get()-Rotataion.get())*(5676*Constants.VelocityConvertionFactor)));
+    }
+
+    public Pose2d getRobotPose(){
+        return PoseEstimator.getEstimatedPosition();
+    }
+
+    public DifferentialDriveWheelPositions getPosition(){
+        return new DifferentialDriveWheelPositions(
+            LeftEncoder.getPosition(),
+            RightEncoder.getPosition());
+    }
+
+    public DifferentialDriveWheelSpeeds getSpeeds(){
+        return new DifferentialDriveWheelSpeeds(
+            LeftEncoder.getVelocity(),
+            RightEncoder.getVelocity()
+        );
+    }
+
+    public void resetPose(Pose2d pose){
+        PoseEstimator.resetPose(pose);
+    }
+
+    public void AutoInit(){
+        try{
+            AutoBuilder.configure(
+                () -> this.getRobotPose(), 
+                this::resetPose, 
+                () -> Constants.kinematics.toChassisSpeeds(getSpeeds()), 
+                (speeds, ff) -> drive(Constants.kinematics.toWheelSpeeds(speeds).leftMetersPerSecond, Constants.kinematics.toWheelSpeeds(speeds).rightMetersPerSecond), 
+                new PPLTVController(
+                    VecBuilder.fill(0.5, 1.0, 2.0), //qX qY, qθ,Like kP — how aggressively it corrects error
+                    VecBuilder.fill(1, 1), //rV, r⍵ Like kD — damps oscillations, makes it smoother
+                    0.02, 5676*Constants.VelocityConvertionFactor), 
+                RobotConfig.fromGUISettings(), 
+                () -> DriverStation.getAlliance().orElseThrow() == Alliance.Red, 
+                this);
+        }catch(Exception e){
+            DriverStation.reportError(e.getMessage(), e.getStackTrace());
+        }
+    }
+
+    public void simInit(){
+        SystemSim = new DifferentialDrivetrainSim(
+            DCMotor.getNEO(2), 
+            Constants.GearRatio, 
+            2.300, 
+            50, 
+            Constants.WheelCirc/Math.PI/2, 
+            Constants.kinematics.trackWidthMeters, 
+            null);
+
+        LeftSim = new SparkMaxSim(LeftMotor, DCMotor.getNEO(2));
+        RightSim = new SparkMaxSim(RightMotor, DCMotor.getNEO(2));
+        LeftEncoderSim = LeftSim.getRelativeEncoderSim();
+        RightEncoderSim = RightSim.getRelativeEncoderSim();
+    }
+
+    @Override
+    public void simulationPeriodic(){
+        SystemSim.setInputs(LeftSim.getAppliedOutput()*12, RightSim.getAppliedOutput()*12);
+        LeftEncoderSim.setPosition(SystemSim.getLeftPositionMeters());
+        RightEncoderSim.setPosition(SystemSim.getRightPositionMeters());
+        LeftEncoderSim.setVelocity(SystemSim.getLeftVelocityMetersPerSecond());
+        RightEncoderSim.setVelocity(SystemSim.getRightVelocityMetersPerSecond());
+        gyro.setAngleAdjustment(-SystemSim.getHeading().getDegrees());
+        SystemSim.update(0.02);
+    }
+
+    public double getMaxTemp(){
+        return Collections.max(List.of(LeftMotor.getMotorTemperature(),LeftBackMotor.getMotorTemperature(), RightMotor.getMotorTemperature(), RightBackMotor.getMotorTemperature()));
+    }
+
+    @Override
+    public void periodic(){
+        PoseEstimator.update(gyro.getRotation2d(), getPosition());
+        if(getSpeeds().leftMetersPerSecond == 0 && getSpeeds().rightMetersPerSecond == 0){
+            NowDoing = "idle";
+        }else{
+            NowDoing = "drive";
+        }
+    }
+
+    public static Drivetrain getInstance(){
+        if(system == null) system = new Drivetrain();
+        return system;
+    }
+}

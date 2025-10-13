@@ -1,0 +1,106 @@
+{
+  "version": "2025.0",
+  "command": {
+    "type": "sequential",
+    "data": {
+      "commands": [
+        {
+          "type": "sequential",
+          "data": {
+            "commands": [
+              {
+                "type": "path",
+                "data": {
+                  "pathName": "Start21"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "PutCoral"
+                }
+              },
+              {
+                "type": "path",
+                "data": {
+                  "pathName": "12CS"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 0.8
+          }
+        },
+        {
+          "type": "sequential",
+          "data": {
+            "commands": [
+              {
+                "type": "path",
+                "data": {
+                  "pathName": "CS22"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "PutCoral"
+                }
+              },
+              {
+                "type": "path",
+                "data": {
+                  "pathName": "22CS"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 0.8
+          }
+        },
+        {
+          "type": "sequential",
+          "data": {
+            "commands": [
+              {
+                "type": "path",
+                "data": {
+                  "pathName": "CS23"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "PutCoral"
+                }
+              },
+              {
+                "type": "path",
+                "data": {
+                  "pathName": "32CS"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 0.8
+          }
+        }
+      ]
+    }
+  },
+  "resetOdom": true,
+  "folder": null,
+  "choreoAuto": false
+}
