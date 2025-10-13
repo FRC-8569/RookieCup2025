@@ -180,6 +180,8 @@ public class Drivetrain extends SubsystemBase{
         RightSim = new SparkMaxSim(RightMotor, DCMotor.getNEO(2));
         LeftEncoderSim = LeftSim.getRelativeEncoderSim();
         RightEncoderSim = RightSim.getRelativeEncoderSim();
+        LeftSim.useDriverStationEnable();
+        RightSim.useDriverStationEnable();
     }
 
     @Override

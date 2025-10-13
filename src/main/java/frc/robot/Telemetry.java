@@ -86,7 +86,7 @@ public class Telemetry extends SubsystemBase{
         RightSpeed.accept(drivetrain.getSpeeds().rightMetersPerSecond);
         ShooterTemp.accept(shooter.getMotorTemp());
         isVisionUsable.accept(Vision.getInstance().hasVision);
-        VisionTargets.accept(Vision.getInstance().Targets);
+        VisionTargets.accept(Vision.getInstance().getTargets());
         RobotCurrent.accept(RobotBase.isReal() ? drivetrain.pdh.getTotalCurrent() : drivetrain.SystemSim.getCurrentDrawAmps()+shooter.getCurrentDraw());
         CurrentScore.accept(Scoring.getInstance().score);
         DeltaCoral.accept(Scoring.getInstance().getDeltaCoral());

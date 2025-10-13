@@ -9,6 +9,7 @@ import org.photonvision.PhotonPoseEstimator.PoseStrategy;
 import org.photonvision.simulation.PhotonCameraSim;
 import org.photonvision.simulation.SimCameraProperties;
 import org.photonvision.simulation.VisionSystemSim;
+import org.photonvision.targeting.PhotonPipelineResult;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
@@ -36,6 +37,7 @@ public class Vision extends SubsystemBase{
     public Alert LocalizationAlert, DriverAlert;
 
     public static Vision vision;
+    public PhotonPipelineResult VisionResult;
 
     private Vision(){
         LocalizationCamera = new PhotonCamera(Constants.LocalizationCamera);
@@ -56,14 +58,10 @@ public class Vision extends SubsystemBase{
     public Pose2d getPose(){
         try{
             if(!LocalizationCamera.isConnected()) throw new RuntimeException("");
-            var results = LocalizationCamera.getAllUnreadResults();
-            if(results.isEmpty()) throw new RuntimeException("");
-            var pose = PoseEstimator.update(results.get(results.size() - 1)).orElseThrow();
-            List<Pose3d> tars = new ArrayList<Pose3d>();
-            results.get(results.size() - 1).targets.forEach(tar -> tars.add(pose.estimatedPose.transformBy(tar.getBestCameraToTarget())));
-            Targets = tars.toArray(Pose3d[]::new);
-            hasVision = true;
+            if(VisionResult == null) throw new RuntimeException("");
+            var pose = PoseEstimator.update(VisionResult).orElseThrow();
             RawPose = pose.estimatedPose;
+            hasVision = true;
             return pose.estimatedPose.toPose2d();
         }catch(Exception e){
             hasVision = false;
@@ -72,10 +70,22 @@ public class Vision extends SubsystemBase{
     }
 
     public void simInit(){
-        SimCamera = new PhotonCameraSim(LocalizationCamera, SimCameraProperties.LL2_1280_720());
+        SimCamera = new PhotonCameraSim(LocalizationCamera, SimCameraProperties.LL2_640_480());
         SimSystem = new VisionSystemSim("VisionSystemSim");
         SimSystem.addCamera(SimCamera, new Transform3d(Constants.CameraPose.toMatrix()));
         SimSystem.addAprilTags(AprilTagFieldLayout.loadField(AprilTagFields.k2025ReefscapeAndyMark));
+    }
+
+    public Pose3d[] getTargets(){
+        Pose2d currentPose = getPose();
+        if(currentPose != null && VisionResult != null){
+            List<Pose3d> tars = new ArrayList<Pose3d>();
+            VisionResult.targets.forEach(tar -> tars.add(new Pose3d(currentPose).plus(tar.getBestCameraToTarget())));
+            hasVision = true;
+            return tars.toArray(Pose3d[]::new);
+        }else{
+            return null;
+        }
     }
 
     @Override
@@ -87,6 +97,8 @@ public class Vision extends SubsystemBase{
     public void periodic(){
         LocalizationAlert.set(LocalizationCamera.isConnected());
         if(!RobotBase.isSimulation())DriverAlert.set(DriverCamera.isConnected());
+        var res = LocalizationCamera.getAllUnreadResults();
+        VisionResult = !res.isEmpty() ? res.get(res.size() - 1) : null;
     }
 
     public static Vision getInstance(){
