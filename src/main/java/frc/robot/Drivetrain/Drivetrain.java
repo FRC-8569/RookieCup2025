@@ -155,7 +155,7 @@ public class Drivetrain extends SubsystemBase{
                 () -> Constants.kinematics.toChassisSpeeds(getSpeeds()), 
                 (speeds, ff) -> drive(Constants.kinematics.toWheelSpeeds(speeds).leftMetersPerSecond, Constants.kinematics.toWheelSpeeds(speeds).rightMetersPerSecond), 
                 new PPLTVController(
-                    VecBuilder.fill(0.5, 1.0, 2.0), //qX qY, qθ,Like kP — how aggressively it corrects error
+                    VecBuilder.fill(0.8, 0.8, .625), //qX qY, qθ,Like kP — how aggressively it corrects error
                     VecBuilder.fill(1, 1), //rV, r⍵ Like kD — damps oscillations, makes it smoother
                     0.02, 5676*Constants.VelocityConvertionFactor), 
                 RobotConfig.fromGUISettings(), 
