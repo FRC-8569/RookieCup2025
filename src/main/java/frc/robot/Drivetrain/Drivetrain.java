@@ -12,7 +12,6 @@ import com.revrobotics.sim.SparkMaxSim;
 import com.revrobotics.sim.SparkRelativeEncoderSim;
 import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkMax;
-import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.SparkBase.PersistMode;
 import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
@@ -36,7 +35,6 @@ import edu.wpi.first.wpilibj.simulation.DifferentialDrivetrainSim;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.Vision.Vision;
 
 public class Drivetrain extends SubsystemBase{
     public SparkMax LeftMotor, LeftBackMotor, RightMotor, RightBackMotor;
@@ -44,8 +42,6 @@ public class Drivetrain extends SubsystemBase{
     public SparkClosedLoopController LeftPID, RightPID;
     public AHRS gyro;
     public DifferentialDrivePoseEstimator PoseEstimator;
-    public PowerDistribution pdh;
-
     public SparkMaxSim LeftSim, RightSim;
     public SparkRelativeEncoderSim LeftEncoderSim, RightEncoderSim;
     public DifferentialDrivetrainSim SystemSim;
@@ -55,7 +51,7 @@ public class Drivetrain extends SubsystemBase{
     public String NowDoing = "null";
 
     private static Drivetrain system;
-    public Vision vision;
+    //public Vision vision;
 
     private Drivetrain(){
         LeftMotor = new SparkMax(Constants.LeftIDs[0], MotorType.kBrushless);
@@ -69,9 +65,6 @@ public class Drivetrain extends SubsystemBase{
         RightPID = RightMotor.getClosedLoopController();
         gyro = new AHRS(NavXComType.kMXP_SPI);
         PoseEstimator = new DifferentialDrivePoseEstimator(Constants.kinematics, gyro.getRotation2d(), getPosition().leftMeters, getPosition().rightMeters, Constants.InitialPose);
-        pdh = new PowerDistribution(Constants.PDHCANID, ModuleType.kRev);
-        pdh.setSwitchableChannel(true);
-        SmartDashboard.putData(pdh);
         
         NowDoing = "null";
 
@@ -81,41 +74,49 @@ public class Drivetrain extends SubsystemBase{
         RightBackConfig = new SparkMaxConfig();
 
         LeftConfig
-            .idleMode(IdleMode.kBrake)
+            .idleMode(Constants.MotorMode)
             .inverted(false)
             .voltageCompensation(12)
-            .smartCurrentLimit(44);
+            .smartCurrentLimit(Constants.SlipCurrent);
         LeftConfig.encoder
             .positionConversionFactor(Constants.PositionConvertionFactor)
             .velocityConversionFactor(Constants.VelocityConvertionFactor);
         LeftConfig.closedLoop.apply(Constants.LeftPID);
+
+        LeftBackConfig.idleMode(Constants.MotorMode);
+        LeftBackConfig.smartCurrentLimit(Constants.SlipCurrent);
         LeftBackConfig.follow(LeftMotor);
 
         RightConfig
-            .idleMode(IdleMode.kBrake)
+            .idleMode(Constants.MotorMode)
             .inverted(true)
             .voltageCompensation(12)
-            .smartCurrentLimit(44);
+            .smartCurrentLimit(Constants.SlipCurrent);
         RightConfig.encoder
             .positionConversionFactor(Constants.PositionConvertionFactor)
             .velocityConversionFactor(Constants.VelocityConvertionFactor);
         RightConfig.closedLoop.apply(Constants.RightPID);
+        RightBackConfig.idleMode(Constants.MotorMode);
+        RightBackConfig.smartCurrentLimit(Constants.SlipCurrent);
         RightBackConfig.follow(RightMotor);
 
         LeftMotor.configure(LeftConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
         RightMotor.configure(RightConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
-        LeftBackMotor.configure(RightBackConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+        LeftBackMotor.configure(LeftBackConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
         RightBackMotor.configure(RightBackConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
     
         AutoInit();
-        vision = Vision.getInstance();
+        //vision = Vision.getInstance();
         if(RobotBase.isSimulation()) simInit();
+        SmartDashboard.putData("PDH", new PowerDistribution(20, ModuleType.kCTRE));
     }
 
     public void drive(double LeftSpeed, double RightSpeed){
         if(RobotBase.isReal()){
-            LeftPID.setReference(LeftSpeed, ControlType.kVelocity);
-            RightPID.setReference(RightSpeed, ControlType.kVelocity);
+            // LeftPID.setReference(LeftSpeed, ControlType.kVelocity);
+            // RightPID.setReference(RightSpeed, ControlType.kVelocity);
+            LeftMotor.set(LeftSpeed/(5676*Constants.VelocityConvertionFactor));
+            RightMotor.set(RightSpeed/(5676*Constants.VelocityConvertionFactor));
         }else{
             LeftSim.setAppliedOutput(LeftSpeed/(5676*Constants.VelocityConvertionFactor));
             RightSim.setAppliedOutput(RightSpeed/(5676*Constants.VelocityConvertionFactor));
@@ -202,7 +203,7 @@ public class Drivetrain extends SubsystemBase{
     @Override
     public void periodic(){
         PoseEstimator.update(gyro.getRotation2d(), getPosition());
-        if(getSpeeds().leftMetersPerSecond == 0 && getSpeeds().rightMetersPerSecond == 0){
+        if((getSpeeds().leftMetersPerSecond+getSpeeds().rightMetersPerSecond)/2 < 0.1){
             NowDoing = "idle";
         }else{
             NowDoing = "drive";

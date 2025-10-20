@@ -2,6 +2,8 @@ package frc.robot;
 
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.inputs.LoggedPowerDistribution;
+import org.littletonrobotics.junction.wpilog.WPILOGWriter;
+import org.littletonrobotics.junction.wpilog.WPILOGWriter.AdvantageScopeOpenBehavior;
 import org.littletonrobotics.urcl.URCL;
 
 import edu.wpi.first.math.geometry.Pose2d;
@@ -24,13 +26,12 @@ import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Drivetrain.Drivetrain;
-import frc.robot.Shooter.Shooter;
 import frc.robot.Vision.Vision;
 import frc.utils.Scoring;
 
 public class Telemetry extends SubsystemBase{
     public Drivetrain drivetrain;
-    public Shooter shooter;
+    //public Shooter shooter;
     
     public StructPublisher<Pose2d> RobotPose;
     public StructPublisher<Pose3d> RawPose;
@@ -44,11 +45,11 @@ public class Telemetry extends SubsystemBase{
 
     public Telemetry(){
         drivetrain = Drivetrain.getInstance();
-        shooter = Shooter.getInstance();
+        // shooter = Shooter.getInstance();
 
 
         if(RobotBase.isSimulation() || (RobotBase.isReal() && DriverStation.isFMSAttached())){
-            DataLog();
+            Logger.registerURCL(URCL.startExternal());
             Logger.start();
         }
 
@@ -79,41 +80,46 @@ public class Telemetry extends SubsystemBase{
         RobotPose.accept(drivetrain.getRobotPose());
         RobotSpeeds.accept(frc.robot.Drivetrain.Constants.kinematics.toChassisSpeeds(drivetrain.getSpeeds()));
         ChassisNowDoing.accept(drivetrain.NowDoing);
-        ShooterNowDoing.accept(shooter.NowDoing);
+        // ShooterNowDoing.accept(shooter.NowDoing);
         BatteryVoltage.accept(RobotController.getBatteryVoltage());
         MatchTime.accept(DriverStation.getMatchTime());
         LeftSpeed.accept(drivetrain.getSpeeds().leftMetersPerSecond);
         RightSpeed.accept(drivetrain.getSpeeds().rightMetersPerSecond);
-        ShooterTemp.accept(shooter.getMotorTemp());
+        // ShooterTemp.accept(shooter.getMotorTemp());
         isVisionUsable.accept(Vision.getInstance().hasVision);
         VisionTargets.accept(Vision.getInstance().getTargets());
-        RobotCurrent.accept(RobotBase.isReal() ? drivetrain.pdh.getTotalCurrent() : drivetrain.SystemSim.getCurrentDrawAmps()+shooter.getCurrentDraw());
         CurrentScore.accept(Scoring.getInstance().score);
         DeltaCoral.accept(Scoring.getInstance().getDeltaCoral());
         RawPose.accept(Vision.getInstance().RawPose);
         EasyField.setRobotPose(drivetrain.getRobotPose());
+
+        DataLog();
     }
 
     @Override
     public void simulationPeriodic(){
-        RoboRioSim.setVInVoltage(BatterySim.calculateDefaultBatteryLoadedVoltage(drivetrain.SystemSim.getCurrentDrawAmps(), shooter.getCurrentDraw()));
+        RoboRioSim.setVInVoltage(BatterySim.calculateDefaultBatteryLoadedVoltage(drivetrain.SystemSim.getCurrentDrawAmps()));
     }
 
     public void DataLog(){
         Logger.recordOutput("Drivetrain/Robotpose", drivetrain.getRobotPose());
         Logger.recordOutput("Drivetrain/RobotSpeeds", frc.robot.Drivetrain.Constants.kinematics.toChassisSpeeds(drivetrain.getSpeeds()));
-        Logger.recordOutput("NowDoing/Drivetrain", drivetrain.NowDoing);
-        Logger.recordOutput("NowDoing/Shooter", shooter.NowDoing);
+        Logger.recordOutput("Drivetrain/LeftSpeed", drivetrain.getSpeeds().leftMetersPerSecond);
+        Logger.recordOutput("Drivetrain/RightSpeed", drivetrain.getSpeeds().rightMetersPerSecond);
+        Logger.recordOutput("Drivetrain/Temp", drivetrain.getMaxTemp());
+        Logger.recordOutput("Drivetrain/Accel", Math.sqrt(Math.pow(drivetrain.gyro.getRawAccelX(), 2)+Math.pow(drivetrain.gyro.getRawAccelY(),2)+Math.pow(drivetrain.gyro.getRawAccelZ(),2)));
+
         Logger.recordOutput("Utils/Battery", RobotController.getBatteryVoltage());
         Logger.recordOutput("Utils/MatchTime", DriverStation.getMatchTime());
-        Logger.recordOutput("DataLog/Drivetrain/LeftSpeed", drivetrain.getSpeeds().leftMetersPerSecond);
-        Logger.recordOutput("DataLog/Drivetrain/RightSpeed", drivetrain.getSpeeds().rightMetersPerSecond);
-        Logger.recordOutput("DataLog/Drivetrain/Temp", drivetrain.getMaxTemp());
-        Logger.recordOutput("Datalog/Shooter/Temp", shooter.getMotorTemp());
+
+        Logger.recordOutput("NowDoing/Drivetrain", drivetrain.NowDoing);
+        // Logger.recordOutput("NowDoing/Shooter", shooter.NowDoing);
+        // Logger.recordOutput("Shooter/Temp", shooter.getMotorTemp());
+
         Logger.recordOutput("Vision/hasVision", Vision.getInstance().hasVision);
         Logger.recordOutput("Vision/Targets", Vision.getInstance().Targets);
         Logger.recordOutput("Vision/RawPose", Vision.getInstance().getPose());
-        LoggedPowerDistribution.getInstance(frc.robot.Drivetrain.Constants.PDHCANID, ModuleType.kRev);
-        Logger.registerURCL(URCL.startExternal());
+        LoggedPowerDistribution.getInstance(frc.robot.Drivetrain.Constants.PDHCANID, ModuleType.kCTRE);
+        Logger.addDataReceiver(new WPILOGWriter("~/logs"));
     }
 }

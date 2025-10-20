@@ -16,13 +16,12 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Drivetrain.Drivetrain;
-import frc.robot.Shooter.Shooter;
 import frc.utils.FieldObject;
 import frc.utils.Scoring;
 
 public class RobotContainer {
   public Drivetrain drivetrain = Drivetrain.getInstance();
-  public Shooter shooter = Shooter.getInstance();
+  // public Shooter shooter = Shooter.getInstance();
   public static XboxController controller = new XboxController(0);
   public static XboxController ShooterController = new XboxController(1);
   public Telemetry telemetry = new Telemetry();
@@ -30,17 +29,17 @@ public class RobotContainer {
 
   public RobotContainer() {
     drivetrain.setDefaultCommand(drivetrain.drive(
-      () -> controller.getRawAxis(1), 
-      () -> controller.getRawAxis(0)));
+      () -> -controller.getLeftY()*0.8, 
+      () -> controller.getLeftX()*0.3));
     configureBindings();
   }
 
   private void configureBindings() {
-    new Trigger(() -> controller.getXButton())
-      .whileTrue(shooter.runShooter());
+    // new Trigger(() -> controller.getXButton())
+    //   .whileTrue(shooter.runShooter());
     
-    new Trigger(() -> ShooterController.getLeftY() > 0.5)
-      .whileTrue(shooter.runShooter());
+    // new Trigger(() -> ShooterController.getLeftY() > 0.5)
+    //   .whileTrue(shooter.runShooter());
 
     new Trigger(() -> ShooterController.getXButton())
       .onTrue(Scoring.getInstance().score(FieldObject.L1));
@@ -62,14 +61,7 @@ public class RobotContainer {
   }
 
   public Command getAutonomousCommand(){
-    try {
-      return AutoBuilder.buildAuto("MainAuto").andThen(
-        isFuckingCoral.get() ? AutoBuilder.pathfindThenFollowPath(PathPlannerPath.fromPathFile("CS24"), PathConstraints.unlimitedConstraints(12)) : AutoBuilder.pathfindThenFollowPath(PathPlannerPath.fromPathFile("FuckTheCoral"), PathConstraints.unlimitedConstraints(12))
-      );
-    } catch (Exception e) {
-      DriverStation.reportError(e.getMessage(), e.getStackTrace());
-      return Commands.none();
-    }
+    return Commands.none();
   }
 
 }

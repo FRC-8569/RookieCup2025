@@ -100,6 +100,7 @@ public class Vision extends SubsystemBase{
         var res = LocalizationCamera.getAllUnreadResults();
         VisionResult = !res.isEmpty() ? res.get(res.size() - 1) : null;
     }
+    
 
     public static Vision getInstance(){
         if(vision == null) vision = new Vision();
