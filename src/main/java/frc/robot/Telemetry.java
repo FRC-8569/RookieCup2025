@@ -48,10 +48,10 @@ public class Telemetry extends SubsystemBase{
         // shooter = Shooter.getInstance();
 
 
-        if(RobotBase.isSimulation() || (RobotBase.isReal() && DriverStation.isFMSAttached())){
-            Logger.registerURCL(URCL.startExternal());
-            Logger.start();
-        }
+        Logger.registerURCL(URCL.startExternal());
+        LoggedPowerDistribution.getInstance(20, ModuleType.kCTRE);
+        Logger.addDataReceiver(new WPILOGWriter(AdvantageScopeOpenBehavior.ALWAYS));
+        Logger.start();
 
         RobotPose = NetworkTableInstance.getDefault().getStructTopic("Drivetrain/RobotPose", Pose2d.struct).publish();
         RobotSpeeds = NetworkTableInstance.getDefault().getStructTopic("Drivetrain/RobotSpeeds", ChassisSpeeds.struct).publish();
@@ -119,7 +119,5 @@ public class Telemetry extends SubsystemBase{
         Logger.recordOutput("Vision/hasVision", Vision.getInstance().hasVision);
         Logger.recordOutput("Vision/Targets", Vision.getInstance().Targets);
         Logger.recordOutput("Vision/RawPose", Vision.getInstance().getPose());
-        LoggedPowerDistribution.getInstance(frc.robot.Drivetrain.Constants.PDHCANID, ModuleType.kCTRE);
-        Logger.addDataReceiver(new WPILOGWriter("~/logs"));
     }
 }
