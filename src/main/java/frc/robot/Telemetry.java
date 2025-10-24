@@ -3,7 +3,6 @@ package frc.robot;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.inputs.LoggedPowerDistribution;
 import org.littletonrobotics.junction.wpilog.WPILOGWriter;
-import org.littletonrobotics.junction.wpilog.WPILOGWriter.AdvantageScopeOpenBehavior;
 import org.littletonrobotics.urcl.URCL;
 
 import edu.wpi.first.math.geometry.Pose2d;
@@ -18,42 +17,42 @@ import edu.wpi.first.networktables.StructArrayPublisher;
 import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotController;
-import edu.wpi.first.wpilibj.PowerDistribution.ModuleType;
 import edu.wpi.first.wpilibj.simulation.BatterySim;
 import edu.wpi.first.wpilibj.simulation.RoboRioSim;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Drivetrain.Drivetrain;
-import frc.robot.Vision.Vision;
+import frc.robot.Shooter.Shooter;
 import frc.utils.Scoring;
 
 public class Telemetry extends SubsystemBase{
     public Drivetrain drivetrain;
-    //public Shooter shooter;
+    public Shooter shooter;
     
     public StructPublisher<Pose2d> RobotPose;
     public StructPublisher<Pose3d> RawPose;
     public StructPublisher<ChassisSpeeds> RobotSpeeds;
     public StringPublisher ChassisNowDoing, ShooterNowDoing;
     public DoublePublisher LeftSpeed, RightSpeed, BatteryVoltage, MatchTime, ChassisTemp, ShooterTemp, RobotCurrent;
-    public BooleanPublisher isVisionUsable, isFuckingCoral;
+    public BooleanPublisher isVisionUsable, isFuckingCoral, isDrivetrainInverted;
     public StructArrayPublisher<Pose3d> VisionTargets;
     public IntegerPublisher CurrentScore, DeltaCoral;
     public Field2d EasyField;
 
     public Telemetry(){
         drivetrain = Drivetrain.getInstance();
-        // shooter = Shooter.getInstance();
+        shooter = Shooter.getInstance();
 
 
+        //LoggedPowerDistribution.getInstance(20, ModuleType.kCTRE);
+        Logger.addDataReceiver(new WPILOGWriter());
         Logger.registerURCL(URCL.startExternal());
-        LoggedPowerDistribution.getInstance(20, ModuleType.kCTRE);
-        Logger.addDataReceiver(new WPILOGWriter(AdvantageScopeOpenBehavior.ALWAYS));
         Logger.start();
 
         RobotPose = NetworkTableInstance.getDefault().getStructTopic("Drivetrain/RobotPose", Pose2d.struct).publish();
         RobotSpeeds = NetworkTableInstance.getDefault().getStructTopic("Drivetrain/RobotSpeeds", ChassisSpeeds.struct).publish();
+        isDrivetrainInverted = NetworkTableInstance.getDefault().getBooleanTopic("Drivetrain/isDrivetrainInverted").publish();
         ChassisNowDoing = NetworkTableInstance.getDefault().getStringTopic("NowDoing/Drivetrain").publish();
         ShooterNowDoing = NetworkTableInstance.getDefault().getStringTopic("NowDoing/Shooter").publish();
         BatteryVoltage = NetworkTableInstance.getDefault().getDoubleTopic("Utils/Battery").publish();
@@ -78,18 +77,19 @@ public class Telemetry extends SubsystemBase{
     public void periodic(){
         RobotPose.accept(drivetrain.getRobotPose());
         RobotSpeeds.accept(frc.robot.Drivetrain.Constants.kinematics.toChassisSpeeds(drivetrain.getSpeeds()));
+        isDrivetrainInverted.accept(drivetrain.isMotorInverted);
         ChassisNowDoing.accept(drivetrain.NowDoing);
-        // ShooterNowDoing.accept(shooter.NowDoing);
+        ShooterNowDoing.accept(shooter.NowDoing);
         BatteryVoltage.accept(RobotController.getBatteryVoltage());
         MatchTime.accept(DriverStation.getMatchTime());
         LeftSpeed.accept(drivetrain.getSpeeds().leftMetersPerSecond);
         RightSpeed.accept(drivetrain.getSpeeds().rightMetersPerSecond);
-        // ShooterTemp.accept(shooter.getMotorTemp());
-        isVisionUsable.accept(Vision.getInstance().hasVision);
-        VisionTargets.accept(Vision.getInstance().getTargets());
-        CurrentScore.accept(Scoring.getInstance().score);
+        ShooterTemp.accept(shooter.getMotorTemp());
+        // isVisionUsable.accept(Vision.getInstance().hasVision);
+        // VisionTargets.accept(Vision.getInstance().getTargets());
+        // CurrentScore.accept(Scoring.getInstance().score);
         DeltaCoral.accept(Scoring.getInstance().getDeltaCoral());
-        RawPose.accept(Vision.getInstance().RawPose);
+        // RawPose.accept(Vision.getInstance().RawPose);
         EasyField.setRobotPose(drivetrain.getRobotPose());
 
         DataLog();
@@ -112,11 +112,11 @@ public class Telemetry extends SubsystemBase{
         Logger.recordOutput("Utils/MatchTime", DriverStation.getMatchTime());
 
         Logger.recordOutput("NowDoing/Drivetrain", drivetrain.NowDoing);
-        // Logger.recordOutput("NowDoing/Shooter", shooter.NowDoing);
-        // Logger.recordOutput("Shooter/Temp", shooter.getMotorTemp());
+        Logger.recordOutput("NowDoing/Shooter", shooter.NowDoing);
+        Logger.recordOutput("Shooter/Temp", shooter.getMotorTemp());
 
-        Logger.recordOutput("Vision/hasVision", Vision.getInstance().hasVision);
-        Logger.recordOutput("Vision/Targets", Vision.getInstance().Targets);
-        Logger.recordOutput("Vision/RawPose", Vision.getInstance().getPose());
+        // Logger.recordOutput("Vision/hasVision", Vision.getInstance().hasVision);
+        // Logger.recordOutput("Vision/Targets", Vision.getInstance().Targets);
+        // Logger.recordOutput("Vision/RawPose", Vision.getInstance().getPose());
     }
 }

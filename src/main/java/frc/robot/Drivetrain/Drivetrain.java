@@ -26,10 +26,8 @@ import edu.wpi.first.math.kinematics.DifferentialDriveWheelPositions;
 import edu.wpi.first.math.kinematics.DifferentialDriveWheelSpeeds;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
-import edu.wpi.first.wpilibj.PowerDistribution.ModuleType;
 import edu.wpi.first.wpilibj.simulation.DifferentialDrivetrainSim;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -50,6 +48,7 @@ public class Drivetrain extends SubsystemBase{
     public String NowDoing = "null";
 
     private static Drivetrain system;
+    public boolean isMotorInverted = false;
     //public Vision vision;
 
     private Drivetrain(){
@@ -74,8 +73,7 @@ public class Drivetrain extends SubsystemBase{
 
         LeftConfig
             .idleMode(Constants.MotorMode)
-            .inverted(false)
-            .voltageCompensation(12)
+            .inverted(isMotorInverted)
             .smartCurrentLimit(Constants.SlipCurrent);
         LeftConfig.encoder
             .positionConversionFactor(Constants.PositionConvertionFactor)
@@ -83,18 +81,25 @@ public class Drivetrain extends SubsystemBase{
         LeftConfig.closedLoop.apply(Constants.LeftPID);
 
         LeftBackConfig.idleMode(Constants.MotorMode);
+        LeftBackConfig.encoder
+            .positionConversionFactor(Constants.PositionConvertionFactor)
+            .velocityConversionFactor(Constants.VelocityConvertionFactor);
         LeftBackConfig.smartCurrentLimit(Constants.SlipCurrent);
         LeftBackConfig.follow(LeftMotor);
 
         RightConfig
             .idleMode(Constants.MotorMode)
-            .inverted(true)
-            .voltageCompensation(12)
+            .inverted(!isMotorInverted)
             .smartCurrentLimit(Constants.SlipCurrent);
         RightConfig.encoder
             .positionConversionFactor(Constants.PositionConvertionFactor)
             .velocityConversionFactor(Constants.VelocityConvertionFactor);
         RightConfig.closedLoop.apply(Constants.RightPID);
+
+        RightBackConfig.encoder
+            .positionConversionFactor(Constants.PositionConvertionFactor)
+            .velocityConversionFactor(Constants.VelocityConvertionFactor);
+
         RightBackConfig.idleMode(Constants.MotorMode);
         RightBackConfig.smartCurrentLimit(Constants.SlipCurrent);
         RightBackConfig.follow(RightMotor);
@@ -107,7 +112,6 @@ public class Drivetrain extends SubsystemBase{
         AutoInit();
         //vision = Vision.getInstance();
         if(RobotBase.isSimulation()) simInit();
-        SmartDashboard.putData("PDH", new PowerDistribution(20, ModuleType.kCTRE));
     }
 
     public void drive(double LeftSpeed, double RightSpeed){
@@ -123,7 +127,9 @@ public class Drivetrain extends SubsystemBase{
     }
 
     public Command drive(Supplier<Double> Throttle,Supplier<Double>  Rotataion){
-        return run(() -> drive((Throttle.get()+Rotataion.get())*(5676*Constants.VelocityConvertionFactor), (Throttle.get()-Rotataion.get())*(5676*Constants.VelocityConvertionFactor)));
+        return run(() -> drive(
+            (isMotorInverted ? -1 : 1)*(Throttle.get()+Rotataion.get())*(5676*Constants.VelocityConvertionFactor), 
+            (isMotorInverted ? -1 : 1)*(Throttle.get()-Rotataion.get())*(5676*Constants.VelocityConvertionFactor)));
     }
 
     public Pose2d getRobotPose(){
@@ -199,10 +205,20 @@ public class Drivetrain extends SubsystemBase{
         return Collections.max(List.of(LeftMotor.getMotorTemperature(),LeftBackMotor.getMotorTemperature(), RightMotor.getMotorTemperature(), RightBackMotor.getMotorTemperature()));
     }
 
+    public Command reverseDirection(){
+        return runOnce(() -> {
+        isMotorInverted = !isMotorInverted;
+        }).ignoringDisable(true);
+    }
+
     @Override
     public void periodic(){
         PoseEstimator.update(gyro.getRotation2d(), getPosition());
-        if((getSpeeds().leftMetersPerSecond+getSpeeds().rightMetersPerSecond)/2 < 0.1){
+        SmartDashboard.putNumber("LeftPercent", LeftMotor.getEncoder().getVelocity());
+        SmartDashboard.putNumber("RightPercent", RightMotor.getEncoder().getVelocity());
+        SmartDashboard.putNumber("LeftBackPercent", LeftBackMotor.getEncoder().getVelocity());
+        SmartDashboard.putNumber("RightBackPercent", RightBackMotor.getEncoder().getVelocity());
+        if(Math.abs((getSpeeds().leftMetersPerSecond+getSpeeds().rightMetersPerSecond)/2) < 0.1){
             NowDoing = "idle";
         }else{
             NowDoing = "drive";

@@ -29,9 +29,9 @@ public class Shooter extends SubsystemBase{
 
         config
             .idleMode(IdleMode.kCoast)
-            .inverted(false)
+            .inverted(true)
             .voltageCompensation(12)
-            .smartCurrentLimit(15);
+            .smartCurrentLimit(30);
 
         if(RobotBase.isSimulation()){
             SimMotor = new SparkMaxSim(Motor, DCMotor.getNeo550(1).withReduction(3));
@@ -49,7 +49,7 @@ public class Shooter extends SubsystemBase{
                 if(RobotBase.isReal())Motor.stopMotor();
                 else SimMotor.setAppliedOutput(0);
                 NowDoing = "null";
-            }).withTimeout(Seconds.of(0.8)).andThen(Scoring.getInstance().score(FieldObject.L1));
+            }).andThen(Scoring.getInstance().score(FieldObject.L1));
     }
 
     public double getMotorTemp(){

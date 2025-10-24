@@ -22,7 +22,7 @@ public class Constants {
     public static final Pose2d InitialPose = new Pose2d(7.6,7, Rotation2d.kZero);
     public static final int PDHCANID = 20;
     public static final IdleMode MotorMode = IdleMode.kBrake;
-    public static final int SlipCurrent = 44;
+    public static final int SlipCurrent = 40;
 
     public static final ClosedLoopConfig LeftPID = new ClosedLoopConfig()
         .pidf(0, 0, 0, 1.0/473)

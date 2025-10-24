@@ -8,14 +8,17 @@ import org.littletonrobotics.junction.LoggedRobot;
 
 import com.pathplanner.lib.auto.NamedCommands;
 
+import edu.wpi.first.cameraserver.CameraServer;
+import edu.wpi.first.cscore.UsbCamera;
+import edu.wpi.first.cscore.VideoSource.ConnectionStrategy;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.wpilibj.PowerDistribution;
+import edu.wpi.first.wpilibj.PowerDistribution.ModuleType;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.Drivetrain.Drivetrain;
-import frc.robot.Shooter.Shooter;
-import frc.robot.Vision.Vision;
 import frc.utils.Scoring;
 
 public class Robot extends LoggedRobot {
@@ -24,11 +27,11 @@ public class Robot extends LoggedRobot {
   private final RobotContainer m_robotContainer;
 
   public Robot() {
-    NamedCommands.registerCommand("PutCoral", Shooter.getInstance().runShooter());
     m_robotContainer = new RobotContainer();
     SmartDashboard.putNumber("L1Auto", 0);
     SmartDashboard.putNumber("L2Auto", 0);
     SmartDashboard.putNumber("L3Auto", 0);
+    SmartDashboard.putData("PDP", new PowerDistribution(20, ModuleType.kCTRE));
   }
 
   @Override
@@ -38,8 +41,8 @@ public class Robot extends LoggedRobot {
 
   @Override
   public void disabledInit() {
-    Pose2d pose = Vision.getInstance().getPose();
-    if(pose != null) Drivetrain.getInstance().PoseEstimator.addVisionMeasurement(pose, RobotController.getFPGATime()/1e6);
+    // Pose2d pose = Vision.getInstance().getPose();
+    // if(pose != null) Drivetrain.getInstance().PoseEstimator.addVisionMeasurement(pose, RobotController.getFPGATime()/1e6);
   }
 
   @Override
