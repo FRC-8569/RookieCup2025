@@ -6,20 +6,12 @@ package frc.robot;
 
 import org.littletonrobotics.junction.LoggedRobot;
 
-import com.pathplanner.lib.auto.NamedCommands;
-
-import edu.wpi.first.cameraserver.CameraServer;
-import edu.wpi.first.cscore.UsbCamera;
-import edu.wpi.first.cscore.VideoSource.ConnectionStrategy;
-import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj.PowerDistribution.ModuleType;
-import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.Drivetrain.Drivetrain;
-import frc.utils.Scoring;
 
 public class Robot extends LoggedRobot {
   private Command m_autonomousCommand;
@@ -43,6 +35,7 @@ public class Robot extends LoggedRobot {
   public void disabledInit() {
     // Pose2d pose = Vision.getInstance().getPose();
     // if(pose != null) Drivetrain.getInstance().PoseEstimator.addVisionMeasurement(pose, RobotController.getFPGATime()/1e6);
+    Drivetrain.getInstance().drive(0, 0);
   }
 
   @Override
@@ -54,9 +47,6 @@ public class Robot extends LoggedRobot {
   @Override
   public void autonomousInit() {
     m_autonomousCommand = m_robotContainer.getAutonomousCommand();
-    Scoring.getInstance().withDefault(SmartDashboard.getNumber("L1Auto", 0), SmartDashboard.getNumber("L2Auto", 0),SmartDashboard.getNumber("L3Auto", 0));
-
-
     if (m_autonomousCommand != null) {
       m_autonomousCommand.schedule();
     }

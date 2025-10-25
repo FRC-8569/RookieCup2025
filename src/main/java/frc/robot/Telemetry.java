@@ -1,7 +1,6 @@
 package frc.robot;
 
 import org.littletonrobotics.junction.Logger;
-import org.littletonrobotics.junction.inputs.LoggedPowerDistribution;
 import org.littletonrobotics.junction.wpilog.WPILOGWriter;
 import org.littletonrobotics.urcl.URCL;
 
@@ -24,7 +23,6 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Drivetrain.Drivetrain;
 import frc.robot.Shooter.Shooter;
-import frc.utils.Scoring;
 
 public class Telemetry extends SubsystemBase{
     public Drivetrain drivetrain;
@@ -37,7 +35,7 @@ public class Telemetry extends SubsystemBase{
     public DoublePublisher LeftSpeed, RightSpeed, BatteryVoltage, MatchTime, ChassisTemp, ShooterTemp, RobotCurrent;
     public BooleanPublisher isVisionUsable, isFuckingCoral, isDrivetrainInverted;
     public StructArrayPublisher<Pose3d> VisionTargets;
-    public IntegerPublisher CurrentScore, DeltaCoral;
+    public IntegerPublisher CurrentScore;
     public Field2d EasyField;
 
     public Telemetry(){
@@ -68,7 +66,6 @@ public class Telemetry extends SubsystemBase{
         isFuckingCoral = NetworkTableInstance.getDefault().getBooleanTopic("isFuckingCoral").publish();
         isFuckingCoral.setDefault(false);
         CurrentScore = NetworkTableInstance.getDefault().getIntegerTopic("NowDoing/CurrentScore").publish();
-        DeltaCoral = NetworkTableInstance.getDefault().getIntegerTopic("NowDoing/DeltaCoral").publish();
         EasyField = new Field2d();
         SmartDashboard.putData(EasyField);
     }
@@ -85,10 +82,9 @@ public class Telemetry extends SubsystemBase{
         LeftSpeed.accept(drivetrain.getSpeeds().leftMetersPerSecond);
         RightSpeed.accept(drivetrain.getSpeeds().rightMetersPerSecond);
         ShooterTemp.accept(shooter.getMotorTemp());
+        CurrentScore.accept(shooter.CoralCount);
         // isVisionUsable.accept(Vision.getInstance().hasVision);
         // VisionTargets.accept(Vision.getInstance().getTargets());
-        // CurrentScore.accept(Scoring.getInstance().score);
-        DeltaCoral.accept(Scoring.getInstance().getDeltaCoral());
         // RawPose.accept(Vision.getInstance().RawPose);
         EasyField.setRobotPose(drivetrain.getRobotPose());
 
@@ -110,6 +106,7 @@ public class Telemetry extends SubsystemBase{
 
         Logger.recordOutput("Utils/Battery", RobotController.getBatteryVoltage());
         Logger.recordOutput("Utils/MatchTime", DriverStation.getMatchTime());
+        Logger.recordOutput("Utils/CurrentScore", shooter.CoralCount);
 
         Logger.recordOutput("NowDoing/Drivetrain", drivetrain.NowDoing);
         Logger.recordOutput("NowDoing/Shooter", shooter.NowDoing);

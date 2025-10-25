@@ -1,9 +1,9 @@
 package frc.robot.Shooter;
 
-import static edu.wpi.first.units.Units.Seconds;
-
 import com.revrobotics.sim.SparkMaxSim;
 import com.revrobotics.spark.SparkMax;
+import com.revrobotics.spark.SparkBase.PersistMode;
+import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
@@ -13,7 +13,6 @@ import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.utils.FieldObject;
-import frc.utils.Scoring;
 
 public class Shooter extends SubsystemBase{
     public SparkMax Motor;
@@ -22,6 +21,7 @@ public class Shooter extends SubsystemBase{
 
     public static Shooter shooter;
     public String NowDoing = "null";
+    public int CoralCount = 0;
 
     private Shooter(){
         Motor = new SparkMax(Constants.Motor, MotorType.kBrushless);
@@ -33,6 +33,8 @@ public class Shooter extends SubsystemBase{
             .voltageCompensation(12)
             .smartCurrentLimit(30);
 
+        Motor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+
         if(RobotBase.isSimulation()){
             SimMotor = new SparkMaxSim(Motor, DCMotor.getNeo550(1).withReduction(3));
         }
@@ -41,15 +43,19 @@ public class Shooter extends SubsystemBase{
     public Command runShooter(){
         return runEnd(
             () -> {
-                if(RobotBase.isReal())Motor.set(0.8);
-                else SimMotor.setAppliedOutput(0.8);
+                if(RobotBase.isReal())Motor.set(1);
+                else SimMotor.setAppliedOutput(1);
                 NowDoing = "PutCoral";
             }, 
             () -> {
                 if(RobotBase.isReal())Motor.stopMotor();
                 else SimMotor.setAppliedOutput(0);
                 NowDoing = "null";
-            }).andThen(Scoring.getInstance().score(FieldObject.L1));
+            }).andThen(score());
+    }
+
+    private Command score(){
+        return runOnce(() -> CoralCount++);
     }
 
     public double getMotorTemp(){

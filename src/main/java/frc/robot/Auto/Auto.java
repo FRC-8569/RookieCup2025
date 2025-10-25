@@ -13,7 +13,7 @@ public class Auto {
     public static Command getAuto(){
         return new SequentialCommandGroup(
             drivetrain.runOnce(() -> drivetrain.resetPose(Constants.InitialPose)),
-            drivetrain.drive(() -> 1.0, () -> 1.0).withTimeout(Seconds.of(1))
+            drivetrain.drive(() -> 1.0, () -> 0.0).withTimeout(Seconds.of(1))
         );
     }
 }

@@ -10,10 +10,10 @@ import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import frc.robot.Auto.Auto;
 import frc.robot.Drivetrain.Drivetrain;
 import frc.robot.Shooter.Shooter;
 import frc.utils.FieldObject;
-import frc.utils.Scoring;
 
 public class RobotContainer {
   public Drivetrain drivetrain = Drivetrain.getInstance();
@@ -25,38 +25,20 @@ public class RobotContainer {
 
   public RobotContainer() {
     drivetrain.setDefaultCommand(drivetrain.drive(
-      () -> -controller.getLeftY()*0.8, 
+      () -> -controller.getLeftY()*0.6, 
       () -> controller.getLeftX()*0.5));
     configureBindings();
   }
 
   private void configureBindings() {
-    // new Trigger(() -> controller.getXButton())
-    //   .whileTrue(shooter.runShooter());
-    
-    new Trigger(() -> ShooterController.getLeftY() > 0.5)
+    new Trigger(() -> ShooterController.getXButton())
       .whileTrue(shooter.runShooter());
     new Trigger(() -> controller.getStartButton())
       .onTrue(drivetrain.reverseDirection());
-
-    new Trigger(() -> ShooterController.getXButton())
-      .onTrue(Scoring.getInstance().score(FieldObject.L1));
-
-    new Trigger(() -> ShooterController.getYButton())
-    .onTrue(Scoring.getInstance().score(FieldObject.L2));
-
-    new Trigger(() -> ShooterController.getAButton())
-      .onTrue(Scoring.getInstance().score(FieldObject.L3));
-
-    new Trigger(() -> ShooterController.getBButton())
-      .onTrue(Scoring.getInstance().score(FieldObject.Processor));
-
-    new Trigger(() -> ShooterController.getRightBumperButton())
-      .onTrue(Scoring.getInstance().score(FieldObject.Railing));
   }
 
   public Command getAutonomousCommand(){
-    return Commands.none();
+    return Auto.getAuto();
   }
 
 }
